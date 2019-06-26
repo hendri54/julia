@@ -1,12 +1,9 @@
-module configLH_test
+module configLHtest
 
-using Base.Test
-reload("configLH")
+using Test
+# include("configLH.jl")
 using configLH
 
-function test_all()
-    computer_test()
-end
 
 function computer_test()
     currentComp = configLH.current_computer()

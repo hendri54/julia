@@ -1,14 +1,14 @@
 function std_std_test()
 
 dbg = true;
-srand(23);
-nRep = 100;
+MersenneTwister(123);
+nRep = 200;
 
 # Define samples
 nObsV = [100, 200, 500, 5000];
 nSamples = length(nObsV);
 # Std dev of Normal for each sample
-tgStdV = collect(Float64, linspace(1.0, 3.0, nSamples));
+tgStdV = collect(Float64, range(1.0, 3.0, length = nSamples));
 trueStdStdV = zeros(Float64, nSamples);
 
 # Iterate over samples

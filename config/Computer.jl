@@ -25,7 +25,7 @@ end
 
 
 # Container for info about computers that code may run on
-type ComputerInfo
+mutable struct ComputerInfo
     compId  ::  Computer
     compName :: String
     runLocal  ::  Bool
@@ -104,4 +104,8 @@ end
 function shared_dir()
     comp = current_computer()
     return shared_dir(comp)
+end
+
+function test_dir()
+    return joinpath(julia_dir(), "test_files")
 end

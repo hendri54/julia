@@ -1,6 +1,8 @@
 export std_std
 
-function std_std{T1 <: AbstractFloat, T2 <: Integer}(xStdV :: Vector{T1}, nObsV :: Vector{T2}, dbg :: Bool)
+using SpecialFunctions
+
+function std_std(xStdV :: Vector{T1}, nObsV :: Vector{T2}, dbg :: Bool) where {T1 <: AbstractFloat, T2 <: Integer}
 # Standard deviation of the standard deviation of a Normal sample with size nObs
 #=
 Source: http://stats.stackexchange.com/questions/631/standard-deviation-of-standard-deviation
@@ -20,6 +22,7 @@ stdStdV = zeros(n);
 for ix = 1 : n
    nObs = Float64(nObsV[ix]);
    if nObs < 300
+       # Gamma function from SpecialFunctions
       gamma1 = gamma((nObs - 1.0) / 2.0)
       gamma2 = gamma(nObs / 2.0)
    else
@@ -40,7 +43,7 @@ end
 
 ##  Output check
 if dbg
-   assert(all(stdStdV .>= 0));
+   @assert (all(stdStdV .>= 0));
 end
 
 return stdStdV

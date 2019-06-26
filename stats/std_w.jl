@@ -1,6 +1,6 @@
 export std_w
 
-function std_w{T <: AbstractFloat}(xM :: Array{T}, wtM :: Array{T})
+function std_w(xM :: Array{T}, wtM :: Array{T}) where T <: AbstractFloat
 # Std dev, weighted data
 #=
 Negative weights are not allowed

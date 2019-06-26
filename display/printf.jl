@@ -4,7 +4,7 @@ IN
     fmtStr
         formatting string that works with Formatting package
 =#
-function sprintf{T <: Number}(fmtStr :: String, x :: Array{T})
+function sprintf(fmtStr :: String, x :: Array{T}) where T <: Number
     x2 = vec(x)
     outStr = "";
     for xVal in x2
@@ -14,7 +14,7 @@ function sprintf{T <: Number}(fmtStr :: String, x :: Array{T})
 end
 
 
-function printf{T <: Number}(fmtStr :: String,  x :: Array{T})
+function printf(fmtStr :: String,  x :: Array{T}) where T <: Number
     print(displayLH.sprintf(fmtStr, x));
     return nothing
 end

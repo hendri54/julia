@@ -1,19 +1,38 @@
-module test_allLH
+# With Revise it seems that `using` is the right approach, not `include`
+# Run this with `using`
+# module test_allLH
 
-reload("configLH_test")
-using configLH_test
+# using Test
 
-reload("displayLH_test")
-using displayLH_test
+@testset "All" begin
+    include("configLHtester.jl")
+    # using configLH_test
 
-reload("statsLH_test")
-using statsLH_test
+    include("displayLHtester.jl")
+    # using displayLH_test
 
-function run()
-    configLH_test.test_all()
-    displayLH_test.test_all()
-    statsLH_test.test_all()
+    include("econLHtester.jl")
+    include("filesLHtester.jl")
+    # using filesLH_test
+    include("LatexLHtester.jl")
+    include("matrixLHtester.jl")
+    include("modelLHtester.jl")
+    # using matrixLHtest
+
+    include("productionFunctionsLHtester.jl")
+    # using productionFunctionsLH_test
+
+    include("projectLHtester.jl")
+    # using projectLH_test
+
+    include("statsLHtester.jl")
+    # using statsLH_test
+
+    include("utilityFunctionsLHtester.jl");
+    # using utilityFunctionsLH_test
+
+    include("vectorLHtester.jl")
+    # using vectorLH_test
 end
 
-
-end
+# end
