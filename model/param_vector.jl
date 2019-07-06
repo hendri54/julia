@@ -2,7 +2,7 @@
 Parameter vector
 
 Intended workflow:
-    See `modelTest()`
+    See `SampleModel`
     Create a model object with parameters as fields
         Otherwise the code gets too cumbersome
         Constructor initializes parameter vector with defaults (or user inputs)
@@ -14,8 +14,9 @@ Intended workflow:
         Copy back into model objects
 
 Going from a vector of Dicts to a vector of Floats and back:
-    Easy for a single `ParamVector`
-    `modelTest()` contains flow for multiple objects
+    `make_guess`
+    `set_params_from_guess!`
+    These are called on the top level model object
 
 Parameters contain values, not just default values
 They are kept in sync with values in object
@@ -103,8 +104,18 @@ function replace!(pvec :: ParamVector, p :: Param)
     return nothing
 end
 
+function change_calibration_status!(pvec :: ParamVector, pName :: Symbol,
+    doCal :: Bool)
 
-# test this +++++
+    _, idx = retrieve(pvec, pName);
+    @assert (idx > 0)  "$pName does not exist"
+    if doCal
+        calibrate!(pvec.pv[idx])
+    else
+        fix!(pvec.pv[idx])
+    end
+end
+
 function change_value!(pvec :: ParamVector, pName :: Symbol, newValue)
     _, idx = retrieve(pvec, pName);
     @assert (idx > 0)  "$pName does not exist"
@@ -112,10 +123,15 @@ function change_value!(pvec :: ParamVector, pName :: Symbol, newValue)
     return nothing
 end
 
+
 """
-## Collect into Dict
+## Collect values or default values into Dict
+
+Used to go back and forth between guess and model parameters
 """
-function make_dict(pvec :: ParamVector, isCalibrated :: Bool)
+function make_dict(pvec :: ParamVector, isCalibrated :: Bool,
+    useValues :: Bool)
+
     n = length(pvec);
     if n < 1
         pd = nothing
@@ -124,11 +140,25 @@ function make_dict(pvec :: ParamVector, isCalibrated :: Bool)
         for i1 in 1 : n
             p = pvec.pv[i1];
             if p.isCalibrated == isCalibrated
-                pd[p.name] = p.value;
+                if useValues
+                    pd[p.name] = p.value;
+                else
+                    pd[p.name] = p.defaultValue;
+                end
             end
         end
     end
     return pd
+end
+
+# Typically, useValues when calibrated; defaults otherwise
+function make_dict(pvec :: ParamVector, isCalibrated :: Bool)
+    if isCalibrated
+        useValues = true;
+    else
+        useValues = false;
+    end
+    make_dict(pvec, isCalibrated, useValues)
 end
 
 
@@ -136,17 +166,14 @@ end
 ## Make vector of values, lb, ub for optimization algorithm
 """
 function make_vector(pvec :: ParamVector, isCalibrated :: Bool)
+    T1 = ValueType;
+    valueV = Vector{T1}();
+    lbV = Vector{T1}();
+    ubV = Vector{T1}();
+
     n = length(pvec);
-    if n < 1
-        valueV = nothing
-        lbV = nothing;
-        ubV = nothing;
-    else
-        p = pvec.pv[1];
-        T1 = Float64;
-        valueV = Vector{T1}();
-        lbV = Vector{T1}();
-        ubV = Vector{T1}();
+    if n > 0
+        # p = pvec.pv[1];
         for i1 in 1 : n
             p = pvec.pv[i1];
             if p.isCalibrated == isCalibrated
@@ -157,12 +184,25 @@ function make_vector(pvec :: ParamVector, isCalibrated :: Bool)
                 Base.append!(ubV, p.ub);
             end
         end
-
-        @assert isa(valueV, Vector{T1})
-        @assert isa(lbV, Vector{T1})
-        @assert isa(ubV, Vector{T1})
     end
-    return valueV, lbV, ubV
+    return valueV :: Vector{T1}, lbV :: Vector{T1}, ubV :: Vector{T1}
+end
+
+
+"""
+## Make vector from a list of param vectors
+"""
+function make_vector(pvv :: Vector{ParamVector}, isCalibrated :: Bool)
+    outV = Vector{ValueType}();
+    lbV = Vector{ValueType}();
+    ubV = Vector{ValueType}();
+    for i1 = 1 : length(pvv)
+        v, lb, ub = make_vector(pvv[i1], isCalibrated);
+        append!(outV, v);
+        append!(lbV, lb);
+        append!(ubV, ub);
+    end
+    return outV :: Vector{ValueType}, lbV :: Vector{ValueType}, ubV :: Vector{ValueType}
 end
 
 
@@ -170,6 +210,7 @@ end
 ## Make a vector into a Dict
 
 The inverse of `make_vector`
+Used to go back from vector to model parameters
 
 OUT
     pd :: Dict
@@ -205,8 +246,6 @@ end
 
 """
 ## Set values in param vector from dictionary
-
-test this +++++
 """
 function set_values_from_dict!(pvec :: ParamVector, d :: Dict{Symbol,Any})
     for (pName, newValue) in d
@@ -232,12 +271,90 @@ end
 
 
 """
-## Set fields in struct from param vector
+## Set fields in struct from param vector (using values, not defaults)
 """
 function set_values_from_pvec!(x, pvec :: ParamVector, isCalibrated :: Bool)
-    d = make_dict(pvec, isCalibrated);
+    d = make_dict(pvec, isCalibrated, true);
     set_values_from_dict!(x, d);
     return nothing
+end
+
+
+"""
+## Set default values from param vector
+Typically for non-calibrated parameters
+"""
+function set_default_values!(x, pvec :: ParamVector, isCalibrated :: Bool)
+    d = make_dict(pvec, isCalibrated, false);
+    set_values_from_dict!(x, d);
+    return nothing
+end
+
+
+"""
+## Sync all values from param vector into object
+"""
+function sync_values!(x, pvec :: ParamVector)
+    set_values_from_pvec!(x, pvec, true);
+    set_default_values!(x, pvec, false);
+end
+
+
+"""
+## Check that param vector values are consistent with object values
+"""
+function check_calibrated_params(x, pvec)
+    d = make_dict(pvec, true);
+    valid = true;
+    for (pName, pValue) in d
+        isValid = getproperty(x, pName) ≈ pValue;
+        if ~isValid
+            valid = false;
+            @warn "Invalid value: $pName"
+        end
+    end
+    return valid
+end
+
+function check_fixed_params(x, pvec)
+    # Make dict of default values for non-calibrated params
+    d = make_dict(pvec, false);
+    valid = true;
+    for (pName, pValue) in d
+        isValid = getproperty(x, pName) ≈ pValue;
+        if ~isValid
+            valid = false;
+            @warn "Invalid value: $pName"
+        end
+    end
+    return valid
+end
+
+
+"""
+## Copy values from vector into param vector and object
+Calibrated parameters
+Uses the first `nUsed` values in `vAll`
+"""
+function sync_from_vector!(x, pvec :: ParamVector, vAll :: Vector{ValueType})
+    d11, nUsed1 = vector_to_dict(pvec, vAll, true);
+    set_values_from_dict!(pvec, d11);
+    set_values_from_pvec!(x, pvec, true);
+    return nUsed1
+end
+
+# The same using vector inputs
+# OUT: vAll: remaining values of vAllInV
+function sync_from_vector!(xV, pvecV :: Vector{ParamVector}, vAllInV :: Vector{ValueType})
+    vAll = copy(vAllInV);
+    for i1 = 1 : length(pvecV)
+        nUsed = sync_from_vector!(xV[i1], pvecV[i1], vAll);
+        deleteat!(vAll, 1 : nUsed);
+    end
+    # Last object: everything should be used up
+    # @assert isempty(vAll)  "Not all vector elements used"
+
+    return vAll
 end
 
 # ------------------

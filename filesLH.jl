@@ -4,7 +4,11 @@ module filesLH
 using FileIO, JLD
 
 
-# Save a variable so that the name is known
+"""
+## Save a variable so that the name is known
+
+Extension for saving Julia objects must be JLD
+"""
 function save(fPath, saveS)
     JLD.save(fPath,  "saveS", saveS)
    # jldopen(fPath, "w") do file
@@ -14,8 +18,10 @@ function save(fPath, saveS)
 end
 
 
-# Load a variable saved with save
+"""
+## Load a variable saved with save
 # Types of variables loaded must be defined before load can be called
+"""
 function load(fPath)
     saveS = JLD.load(fPath, "saveS")
    # saveS = jldopen(fPath, "r") do file

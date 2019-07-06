@@ -4,6 +4,7 @@ using modelLH
 using Test
 
 include("model/deviation_test.jl")
+include("model/param_vector_test.jl")
 
 """
 ## Parameter
@@ -47,85 +48,12 @@ function paramTest()
 end
 
 
-"""
-## Parameter vector
-"""
-function pvectorTest()
-    pv = ParamVector();
-    @test length(pv) == 0
-    p = Param(:p1, "param1", "sym1", [1.2 3.4; 4.5 5.6])
-    modelLH.append!(pv, p)
-    @test length(pv) == 1
 
-    pOut, idx = retrieve(pv, :p11)
-    @test idx == 0
-    @test !exists(pv, :p11)
-    pOut, idx = retrieve(pv, :p1)
-    @test idx == 1
-    @test pOut.name == :p1
-    @test exists(pv, :p1)
-
-    p = Param(:p2, "param2", "sym2", [2.2 4.4; 4.5 5.6])
-    modelLH.append!(pv, p)
-    modelLH.remove!(pv, :p1)
-    @test length(pv) == 1
-    @test exists(pv, :p2)
-    @test !exists(pv, :p1)
-
-    # Test replace
-    p2 = Param(:p2, "param2", "sym2", 1.0);
-    modelLH.replace!(pv, p2);
-    p22, _ = retrieve(pv, :p2);
-    @test p22.value == 1
-
-    # Retrieve non-existing
-    p3, idx = retrieve(pv, :notThere);
-    @test isnothing(p3) && (idx == 0)
-
-    # Parameter value
-    pValue = param_value(pv, :p2);
-    @test pValue == p2.value
-    pValue = param_value(pv, :notThere);
-    @test isnothing(pValue)
-
-    return true
-end
-
-function pvectorDictTest()
-    # Setup
-    pv = ParamVector();
-    p1 = Param(:p1, "param1", "sym1", [1.2 3.4 4.4; 4.5 5.6 7.7])
-    calibrate!(p1)
-    modelLH.append!(pv, p1)
-    p2 = Param(:p2, "param2", "sym2", 2.0 .+ [1.2 3.4; 4.5 5.6])
-    modelLH.append!(pv, p2)
-    p3 = Param(:p3, "param3", "sym3", 2.0 .+ [1.2 3.4; 4.5 5.6])
-    modelLH.append!(pv, p3)
-    calibrate!(p3)
-
-    d = make_dict(pv, true)
-    @test d[:p1] == p1.value
-    @test d[:p3] == p3.value
-    @test length(d) == 2
-
-    # Make vector and its inverse (make Dict from vector)
-    isCalibrated = true;
-    valV, lbV, ubV = make_vector(pv, isCalibrated);
-    @test isa(valV,  Vector{Float64})
-    @test valV == vcat(vec(p1.value), vec(p3.value))
-    @test lbV == vcat(vec(p1.lb), vec(p3.lb))
-
-    pDict, _ = vector_to_dict(pv, valV, isCalibrated);
-    @test length(pDict) == 2
-    @test pDict[:p1] == p1.value
-    @test pDict[:p3] == p3.value
-
-    return true
-end
 
 
 """
 ## Test model
+More extensive testing in `SampleModel`
 """
 mutable struct Obj1
     x :: Float64
@@ -145,7 +73,7 @@ function init_obj1()
         valueY .- 5.0, valueY .+ 5.0, true);
     valueZ = [3.3 4.4; 5.5 7.6];
     pz = Param(:z, "z obj1", "z1", valueZ, valueZ .+ 1.0,
-        valueZ .- 5.0, valueZ .+ 5.0, true);
+        valueZ .- 5.0, valueZ .+ 5.0, false);
     pvector = ParamVector([px, py, pz])
     o1 = Obj1(px.value, py.value, pz.value);
     modelLH.set_values_from_pvec!(o1, pvector, true);
@@ -193,19 +121,9 @@ function init_test_model()
 end
 
 """
-Simulates the workflow for calibration
+## Simulates the workflow for calibration
 
-If model objects contain other model objects, just "reach in" and operate directly on
-the nested objects.
-
-The calibration operates on the param vector. Then we just copy the values from the
-param vector into the object for convenience
-
-There is no need to store the param vectors in the model objects
-
-Simplest: Model objects have default constructors and constructors for param vectors
-The model keeps them separate.
-Benefit: one can save calibrated parameters by just saving the parameter vectors
+More extensive testing in `SampleModel`
 """
 function modelTest()
     m = init_test_model()
@@ -213,19 +131,15 @@ function modelTest()
 
     # Sync calibrated model values with param vector
     modelLH.set_values_from_pvec!(m.o1, m.pvec1, isCalibrated);
-    modelLH.set_values_from_pvec!(m.o2, m.pvec2, isCalibrated);
+    # also sync the non-calibrated default values
+    modelLH.set_default_values!(m.o1, m.pvec1, false);
+    @test modelLH.check_calibrated_params(m.o1, m.pvec1);
+    @test modelLH.check_fixed_params(m.o1, m.pvec1);
 
-    # For each model object: make vector of param values
-    v1, _ = make_vector(m.pvec1, isCalibrated);
-    @test isa(v1, Vector{Float64})
-    v2, _ = make_vector(m.pvec2, isCalibrated);
-    @test isa(v2, Vector{Float64})
-
-    # This is passed to optimizer as guess
-    vAll = [v1; v2];
-    @test isa(vAll, Vector{Float64})
-
-    # Now we run the optimizer, which changes `vAll`
+    # The same in one step
+    modelLH.sync_values!(m.o2, m.pvec2);
+    @test modelLH.check_calibrated_params(m.o2, m.pvec2);
+    @test modelLH.check_fixed_params(m.o2, m.pvec2);
 
     # This step just for testing
     # These are the values that we expect to get back in the end
@@ -233,18 +147,51 @@ function modelTest()
     d2 = make_dict(m.pvec2, isCalibrated);
 
 
+    # For each model object: make vector of param values
+    v1, lb1, ub1 = make_vector(m.pvec1, isCalibrated);
+    @test isa(v1, Vector{Float64})
+    v2, lb2, ub2 = make_vector(m.pvec2, isCalibrated);
+    @test isa(v2, Vector{Float64})
+
+    # This is passed to optimizer as guess
+    vAll = [v1; v2];
+    @test isa(vAll, Vector{Float64})
+
+    # Same in one step for all param vectors
+    vAll2, lbAllV, ubAllV = modelLH.make_vector([m.pvec1, m.pvec2], isCalibrated);
+    @test vAll ≈ vAll2
+    @test lbAllV ≈ [lb1; lb2]
+    @test ubAllV ≈ [ub1; ub2]
+
+    # Now we run the optimizer, which changes `vAll`
+
+
+
     # In the objective function: the guess is reassembled
     # into dicts which are then put into the objects
 
-    # but they also need to be put into the param vectors +++++
+    # Using in a single convenience method
+    vOut = modelLH.sync_from_vector!([m.o1, m.o2], [m.pvec1, m.pvec2], vAll);
+    @test isempty(vOut);
+    @test modelLH.check_calibrated_params(m.o1, m.pvec1);
+    @test modelLH.check_fixed_params(m.o1, m.pvec1);
+    @test modelLH.check_calibrated_params(m.o2, m.pvec2);
+    @test modelLH.check_fixed_params(m.o2, m.pvec2);
 
+    # The same step-by-step. Only needed for testing
     d11, nUsed1 = vector_to_dict(m.pvec1, vAll, isCalibrated);
     @test d11[:x] == d1[:x]
     @test d11[:y] == d1[:y]
     # copy into param vector; then sync with model object
-    # needs to be one convenience function +++++
     modelLH.set_values_from_dict!(m.pvec1, d11);
     modelLH.set_values_from_pvec!(m.o1, m.pvec1, isCalibrated);
+    @test m.o1.x ≈ d1[:x]
+    @test m.o1.y ≈ d1[:y]
+
+    # The same in a single convenience function, one object at a time
+    # Just for testing
+    nUsed11 = modelLH.sync_from_vector!(m.o1, m.pvec1, vAll);
+    @test nUsed11 == nUsed1
     @test m.o1.x ≈ d1[:x]
     @test m.o1.y ≈ d1[:y]
     deleteat!(vAll, 1 : nUsed1);
@@ -269,9 +216,6 @@ function modelTest()
     modelLH.set_values_from_pvec!(m.o2, m.pvec2, isCalibrated);
     @test m.o2.b ≈ d22[:b]
 
-    # continue here +++++
-    # how to make that into a function that can be used generically?
-    # or just do this by hand each time?
     return true
 end
 

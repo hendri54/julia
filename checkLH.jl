@@ -1,7 +1,7 @@
 module checkLH
 # Error checking code
 
-# using Debug
+export validate, validate_scalar
 
 include("check/check.jl")
 # export check

@@ -4,6 +4,7 @@ using configLH
 import Base.show
 export project_start
 
+const initFile = "init.jl"
 
 """
 ## User interface
@@ -11,6 +12,7 @@ export project_start
 function project_start(pName  ::  AbstractString)
     proj = get_project(pName);
     project_start(proj);
+    return proj
 end
 
 
@@ -46,11 +48,16 @@ end
 """
 function project_start(proj :: Project)
     println("Starting project $(proj.name)");
+    println("Dir:  $(proj.progDir)")
     @assert isdir(proj.progDir)  "Not found: $(proj.progDir)"
     push!(LOAD_PATH, proj.progDir);
     push!(LOAD_PATH, proj.dirsOnPath);
     cd(proj.progDir);
-    println("Dir:  $(proj.progDir)")
+    initPath = joinpath(proj.progDir, initFile);
+    if isfile(initPath)
+        include(initPath);
+    end
+    return nothing
 end
 
 
@@ -60,7 +67,7 @@ Newest at the top
 """
 function get_project(pName :: AbstractString)
     if pName == "test"
-        progDir = pwd();
+        progDir = configLH.shared_dir();
         proj = Project(pName, progDir, shared_dirs())
     elseif pName == "sampleModel"
         # Code to try out modeling code (setting parameters etc)

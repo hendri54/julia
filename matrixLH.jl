@@ -25,7 +25,7 @@ accumarray for matrices
 "https://groups.google.com/forum/#!topic/julia-users/QwdFHbbasis"
 """
 function accumarray(subs, val :: Array{T,1}, fun=sum,
-    sz=maximum(subs, dims=1))  where T <: Real
+    sz=maximum(subs, dims=1))  where T <: Number
 
    counts = Dict()
    for i = 1:size(subs,1)

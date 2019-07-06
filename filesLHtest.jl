@@ -2,7 +2,7 @@ module filesLHtest
 
 using Test;
 # include("filesLH.jl")
-using filesLH
+using configLH, filesLH
 
 struct saveS
     x1
@@ -10,10 +10,14 @@ struct saveS
     x3
 end
 
+function file_path()
+    return joinpath(configLH.test_dir(), "load_save_test.jld")
+end
+
 function load_save_test()
     xS = saveS(1.23, "abc", [1.2 2.3; 3.4 4.5]);
 
-    fPath = "load_save_test.jld"
+    fPath = file_path();
 
     filesLH.save(fPath, xS);
 
