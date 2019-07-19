@@ -28,16 +28,22 @@ export append!, exists, make_dict, make_vector
 export param_value, retrieve, vector_to_dict
 
 mutable struct ParamVector
+    objId :: ObjectId
     pv :: Vector{Param}
 end
 
 ## Constructor
-function ParamVector()
-    return ParamVector(Vector{Param}())
+function ParamVector(id :: ObjectId)
+    return ParamVector(id, Vector{Param}())
 end
 
 function length(pvec :: ParamVector)
     return Base.length(pvec.pv)
+end
+
+# Check that param vector matches model object
+function check_match(pvec :: ParamVector, objId :: ObjectId)
+    return modelLH.isequal(pvec.objId, objId)
 end
 
 
@@ -123,6 +129,45 @@ function change_value!(pvec :: ParamVector, pName :: Symbol, newValue)
     return nothing
 end
 
+
+"""
+## Report
+
+Reports calibrated (or fixed) parameters for one ParamVector
+"""
+function report_params(pvec :: ParamVector, isCalibrated :: Bool)
+    objId = make_string(pvec.objId);
+    println("Object id:  $objId")
+    n = length(pvec);
+    if n < 1
+        return nothing
+    end
+    for i1 = 1 : n
+        if pvec.pv[i1].isCalibrated == isCalibrated
+            report_param(pvec.pv[i1])
+        end
+    end
+    return nothing
+end
+
+
+"""
+Number of calibrated parameters
+"""
+function n_calibrated_params(pvec :: ParamVector, isCalibrated :: Bool)
+    nParams = 0;
+    nElem = 0;
+    n = length(pvec);
+    if n > 0
+        for i1 = 1 : n
+            if pvec.pv[i1].isCalibrated == isCalibrated
+                nParams += 1;
+                nElem += length(pvec.pv[i1].value);
+            end
+        end
+    end
+    return nParams, nElem
+end
 
 """
 ## Collect values or default values into Dict
@@ -348,6 +393,8 @@ end
 function sync_from_vector!(xV, pvecV :: Vector{ParamVector}, vAllInV :: Vector{ValueType})
     vAll = copy(vAllInV);
     for i1 = 1 : length(pvecV)
+        # check that ParamVector matches model object
+        @assert check_match(pvecV[i1], xV[i1].objId);
         nUsed = sync_from_vector!(xV[i1], pvecV[i1], vAll);
         deleteat!(vAll, 1 : nUsed);
     end

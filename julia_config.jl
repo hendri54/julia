@@ -3,6 +3,9 @@ This file is to be run once when a new version is installed.
 """
 Pkg.add("OhMyREPL")
 Pkg.add("Revise")
+Pkg.add("BSON")
+Pkg.add("CSV")
+Pkg.add("DataFrames")
 Pkg.add("Debugger")
 Pkg.add("Distributions")
 Pkg.add("FileIO")

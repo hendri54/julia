@@ -8,9 +8,14 @@ function sprintf(fmtStr :: String, x :: Array{T}) where T <: Number
     x2 = vec(x)
     outStr = "";
     for xVal in x2
-      outStr = outStr * format(fmtStr, xVal)
+      outStr = outStr * Formatting.format(fmtStr, xVal)
     end
     return outStr
+end
+
+# Scalar input
+function sprintf(fmtStr :: String, x :: T1) where T1 <: Number
+    return sprintf(fmtStr, [x])
 end
 
 

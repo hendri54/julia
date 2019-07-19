@@ -1,12 +1,32 @@
 module Test1
 
-function foo(x)
-    println("Test1.foo")
-    return -x.x
+
+@enum Fruit apple=1 orange=2 kiwi=3
+
+function foo(apple)
+    println("apple")
 end
 
-function bar(x)
-    println(foo(x))
+function foo(orange)
+    println("orange")
+end
+
+abstract type AT end
+
+struct A1 <: AT
+    x
+end
+
+struct A2 <: AT
+    z
+end
+
+function bar(z :: A1)
+    println("A1")
+end
+
+function bar(z :: A2)
+    println("A2")
 end
 
 end

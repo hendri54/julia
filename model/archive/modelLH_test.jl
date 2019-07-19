@@ -14,7 +14,6 @@ function test_all()
 end
 
 
-# too long, refactor +++++
 function param_vector_test()
    param_vector_basic_test();
    param_vector_list_test();
@@ -22,7 +21,7 @@ end
 
 function param_vector_basic_test()
    println("\nTesting ParamVector")
-   pv = modelLH.ParamVector();
+   pv = modelLH.ParamVector(ObjectId(:pv1));
 
    @test modelLH.length(pv) == 0
    @test !modelLH.param_exists(pv, :test1)
@@ -82,7 +81,7 @@ end
 
 
 function param_vector_list_test()
-   pv = modelLH.ParamVector();
+   pv = modelLH.ParamVector(ObjectId(:pv1));
    ps1 = modelLH_test.make_param_struct(1, true);
    ps2 = modelLH_test.make_param_struct(2, false);
    ps3 = modelLH_test.make_param_struct(3, true);

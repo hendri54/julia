@@ -1,3 +1,13 @@
+"""
+Support for calibrating models
+
+Change:
+    Reporting parameters
+        make a "tree" of the model structure +++
+            each node has name, type, pvec, children
+            then one can re-engineer everything else from this (pvectors, child objects, etc)
+"""
+
 module modelLH
 
 import Base.show
@@ -8,6 +18,9 @@ export collect_model_objects, collect_pvectors, validate
 
 const ValueType = Float64
 
+abstract type ModelObject end
+
+include("model/object_id.jl")
 include("model/parameters.jl")
 include("model/param_vector.jl")
 include("model/deviation.jl")
@@ -16,7 +29,7 @@ include("model/deviation.jl")
 """
 ## Abstract model object
 
-Must have
+Must have field `objId :: ObjectId` that uniquely identifies it
 
 Model may contain a ParamVector, but need not.
 
@@ -24,13 +37,13 @@ Child objects may be vectors. Then the vector must have a fixed element type tha
 a subtype of `ModelObject`
 """
 
-abstract type ModelObject end
 
 # There is currently nothing to validate
 # Code permits objects without ParamVector or child objects
 function validate(m :: T1) where T1 <: ModelObject
     # @assert isa(m.hasParamVector, Bool)
     # @assert isa(get_child_objects(m), Vector)
+    @assert isdefined(m, :objId)
     return nothing
 end
 
@@ -40,19 +53,24 @@ end
 """
 function get_child_objects(o :: T1) where T1 <: ModelObject
     childV = Vector{Any}();
+    nameV = Vector{Symbol}();
     for pn in propertynames(o)
         obj = getproperty(o, pn);
         if isa(obj, Vector)
             if eltype(obj) <: ModelObject
-                append!(childV, obj)
+                append!(childV, obj);
+                for i1 = 1 : length(obj)
+                    push!(nameV, Symbol("$pn$i1"));
+                end
             end
         else
             if typeof(obj) <: ModelObject
                 push!(childV, obj);
+                push!(nameV, pn);
             end
         end
     end
-    return childV :: Vector
+    return childV :: Vector, nameV
 end
 
 
@@ -61,7 +79,7 @@ end
 """
 function get_pvector(o :: T1) where T1 <: ModelObject
     found = false;
-    pvec = ParamVector();
+    pvec = ParamVector(o.objId);
 
     # Try the default field
     if isdefined(o, :pvec)
@@ -95,32 +113,68 @@ end
 
 """
 ## Collect all model objects inside an object
+
+Recursive. Also collects objects inside child objects and so on.
 """
-function collect_model_objects(o :: T1) where T1 <: ModelObject
+function collect_model_objects(o :: T1, objName :: Symbol) where T1 <: ModelObject
     outV = Vector{Any}();
+    nameV = Vector{Symbol}();
     if has_pvector(o)
         push!(outV, o);
+        push!(nameV, objName);
     end
 
-    # Objects contained in `o`; including `selfObj` if `o` contains
-    # calibrated parameters
-    objV = get_child_objects(o);
-    if !isempty(objV)
-        for i1 = 1 : length(objV)
-            append!(outV, collect_model_objects(objV[i1]));
+    # Objects directly contained in `o`
+    childObjV, childNameV = get_child_objects(o);
+    if !Base.isempty(childObjV)
+        for i1 = 1 : length(childObjV)
+            nestedObjV, nestedNameV = collect_model_objects(childObjV[i1], childNameV[i1]);
+            append!(outV, nestedObjV);
+            append!(nameV, nestedNameV);
         end
     end
-    return outV :: Vector
+    return outV :: Vector, nameV :: Vector{Symbol}
 end
 
 
-function collect_pvectors(o)
-    objV = collect_model_objects(o);
+function collect_pvectors(o :: T1) where T1 <: ModelObject
+    objV, _ = collect_model_objects(o, :self);
     pvecV = Vector{ParamVector}();
     for i1 = 1 : length(objV)
         push!(pvecV, get_pvector(objV[i1]));
     end
     return pvecV :: Vector{ParamVector}
+end
+
+
+"""
+Report all parameters by calibration status
+
+For all ModelObjects contained in `o`
+"""
+function report_params(o :: T1, isCalibrated :: Bool) where T1 <: ModelObject
+    # objV, nameV = collect_model_objects(o, :self);
+    pvecV = collect_pvectors(o);
+
+    for i1 = 1 : length(pvecV)
+        # objType = typeof(objV[i1]);
+        # println("----  $(nameV[i1])  of type  $objType")
+        modelLH.report_params(pvecV[i1], isCalibrated);
+    end
+end
+
+
+# Number of calibrated parameters
+function n_calibrated_params(o :: T1, isCalibrated :: Bool) where T1 <: ModelObject
+    pvecV = collect_pvectors(o);
+    nParam = 0;
+    nElem = 0;
+    for i1 = 1 : length(pvecV)
+        nParam2, nElem2 = n_calibrated_params(pvecV[i1], isCalibrated);
+        nParam += nParam2;
+        nElem += nElem2;
+    end
+    return nParam, nElem
 end
 
 
@@ -143,7 +197,7 @@ how to deal with guess transformations +++++
 function set_params_from_guess!(m :: ModelObject, guessV :: Vector{Float64})
     # Copy guesses into model objects
     pvecV = collect_pvectors(m);
-    objV = collect_model_objects(m);
+    objV, _ = collect_model_objects(m, :self);
     # Copy param vectors into model
     vOut = sync_from_vector!(objV, pvecV, guessV);
     # Make sure all parameters have been used up

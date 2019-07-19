@@ -5,7 +5,7 @@
 # Make a ParamVector for testing
 # Alternates between calibrated and fixed parameters
 function init_pvector(n :: Integer)
-    pv = ParamVector();
+    pv = ParamVector(ObjectId(:obj1));
     for i1 = 1 : n
         p = init_parameter(i1);
         if isodd(i1)
@@ -29,12 +29,15 @@ end
 ## Test basic operations
 """
 function pvectorTest()
-    pv = ParamVector();
+    pv = ParamVector(ObjectId(:pv1));
     @test length(pv) == 0
 
     p = Param(:p1, "param1", "sym1", [1.2 3.4; 4.5 5.6])
     modelLH.append!(pv, p)
     @test length(pv) == 1
+    nParam, nElem = modelLH.n_calibrated_params(pv, p.isCalibrated);
+    @test nParam == 1
+    @test nElem == 4
 
     pOut, idx = retrieve(pv, :p11)
     @test idx == 0
@@ -103,28 +106,52 @@ end
 ## Finding ParamVector in object
 """
 mutable struct M1 <: ModelObject
+    objId :: ObjectId
     pvec :: ParamVector
 end
 
 mutable struct M2 <: ModelObject
+    objId :: ObjectId
     x :: ParamVector
     y :: Float64
 end
 
 mutable struct M3 <: ModelObject
+    objId :: ObjectId
     y :: Float64
 end
 
 function get_pvector_test()
-    m1 = M1(ParamVector());
+    m1 = M1(ObjectId(:m1),  ParamVector(ObjectId(:m1)));
     @test modelLH.get_pvector(m1) == m1.pvec
 
-    m2 = M2(ParamVector(), 1.2);
+    m2 = M2(ObjectId(:m2),  ParamVector(ObjectId(:m2)), 1.2);
     @test modelLH.get_pvector(m2) == m2.x
 
-    m3 = M3(1.2);
+    m3 = M3(ObjectId(:m3),  1.2);
     pvec3 = modelLH.get_pvector(m3);
     @test length(pvec3) == 0
+
+    return true
+end
+
+
+"""
+## Showing param vector
+"""
+function report_test()
+    pv = init_pvector(9);
+    println("Calibrated parameters")
+    modelLH.report_params(pv, true)
+    nParam, nElem = modelLH.n_calibrated_params(pv, true);
+    @test nParam == 5
+    @test nElem > 10
+
+    println("Fixed parameters")
+    modelLH.report_params(pv, false)
+    nParam, nElem = modelLH.n_calibrated_params(pv, false);
+    @test nParam == 4
+    @test nElem > 8
     return true
 end
 

@@ -197,8 +197,8 @@ IN
       created by parameters_as_vector
 OUT
    updated values in pv
+Test: SampleModel
 """
-# test this +++++
 function vector_to_values(this :: ParamVector, guessV :: Vector{Float64},
    doCalIn :: Bool)
    pList = param_list(this, doCalIn);

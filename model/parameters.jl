@@ -31,10 +31,10 @@ end
 
 function validate(p :: Param)
     sizeV = size(p.defaultValue);
-    if !isempty(p.value)
+    if !Base.isempty(p.value)
         @assert size(p.value) == sizeV
     end
-    if !isempty(p.lb)
+    if !Base.isempty(p.lb)
         @assert size(p.lb) == sizeV
         @assert size(p.ub) == sizeV
     end
@@ -84,8 +84,13 @@ end
 ## Show
 """
 function short_string(p :: Param)
-    # needs to use a better function +++
+    # improve value formatting +++
     return "$(p.name): $(p.value)"
+end
+
+function report_param(p :: Param)
+    # improve value formatting +++
+    println("$(p.name): $(p.description): $(p.value)")
 end
 
 
