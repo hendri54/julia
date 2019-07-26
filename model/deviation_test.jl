@@ -44,6 +44,8 @@ function devVectorTest()
     dev22 = modelLH.retrieve(d, :d2);
     @test !modelLH.isempty(dev22)
     @test dev22.dataV ≈ dev2.dataV
+    @test modelLH.exists(d, :d2)
+    @test !modelLH.exists(d, :notThere)
 
     modelV = dev22.dataV .+ 1.3;
     modelLH.set_model_values(d, :d2, modelV);

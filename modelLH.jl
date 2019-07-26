@@ -206,4 +206,41 @@ function set_params_from_guess!(m :: ModelObject, guessV :: Vector{Float64})
 end
 
 
+"""
+    merge_object_arrays!
+
+Merge all arrays (and vectors) from one object into the corresponding arrays
+in another object (at given index values)
+If target does not have corresponding field: behavior is governed by `skipMissingFields`
+"""
+function merge_object_arrays!(oSource, oTg, idxV,
+    skipMissingFields :: Bool; dbg :: Bool = false)
+
+    nameV = fieldnames(typeof(oSource));
+    for name in nameV
+        xSrc = getfield(oSource, name);
+        if isa(xSrc,  Array)
+            # Does target have this field?
+            if isdefined(oTg, name)
+                xTg = getfield(oTg, name);
+                if dbg
+                    @assert size(xSrc)[1] == length(idxV)
+                    @assert size(xSrc)[2:end] == size(xTg)[2:end] "Size mismatch: $(size(xSrc)) vs $(size(xTg))"
+                end
+                # For multidimensional arrays (we don't know the dimensions!)
+                # we need to loop over "rows"
+                for (i1, idx) in enumerate(idxV)
+                    # This selects target "row" `idx`
+                    tgView = selectdim(xTg, 1, idx);
+                    # Copy source "row" `i1` into target row (in place, hence [:])
+                    tgView[:] = selectdim(xSrc, 1, i1);
+                end
+            elseif !skipMissingFields
+                error("Missing field $name in target object")
+            end
+        end
+    end
+    return nothing
+end
+
 end

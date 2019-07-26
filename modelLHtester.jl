@@ -12,4 +12,6 @@ using modelLHtest
     @test modelLHtest.modelTest()
     @test modelLHtest.deviationTest()
     @test modelLHtest.devVectorTest()
+
+    @test modelLHtest.merge_object_arrays_test()
 end

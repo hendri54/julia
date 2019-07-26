@@ -4,6 +4,7 @@ export round_to_grid
 
 """
 accumarray for linear indices
+
 Due to Tim Holy
 "https://groups.google.com/forum/#!topic/julia-users/QwdFHbbasis"
 
@@ -21,7 +22,8 @@ end
 
 
 """
-accumarray for matrices
+accumarray for arrays
+
 "https://groups.google.com/forum/#!topic/julia-users/QwdFHbbasis"
 """
 function accumarray(subs, val :: Array{T,1}, fun=sum,

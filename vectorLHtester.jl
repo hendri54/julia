@@ -4,5 +4,7 @@ using vectorLHtest
     println("Test set vectorLH")
     vectorLHtest.countbool_test()
     vectorLHtest.count_elem_test()
-    # return true
+    vectorLHtest.counts_from_fractions_test()
+    vectorLHtest.counts_to_indices_test()
+    vectorLHtest.scale_vector_test()
 end

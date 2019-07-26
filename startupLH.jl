@@ -4,7 +4,7 @@ push!(LOAD_PATH, pwd())
 
 using OhMyREPL
 using Printf
-using Random
+using Random, StatsBase
 using Test
 
 using Revise

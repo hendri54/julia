@@ -10,6 +10,10 @@ end
 function utility(uS :: CRRA, cM :: Array{T1}) where
     T1 <: AbstractFloat
 
+    if uS.dbg
+        @assert all(cM .> 0.0)  "Negative consumption"
+    end
+
   if uS.sigma == 1.0
     utilM = log(cM)
   else
@@ -24,12 +28,16 @@ end
 function marginal_utility(uS :: CRRA, cM :: Array{T1}) where
     T1 <: AbstractFloat
 
-   if uS.sigma == 1.0
-     muM = 1.0 ./ cM;
-   else
-      muM = cM .^ (-uS.sigma);
-   end
-   return muM
+    if uS.dbg
+        @assert all(cM .> 0.0)  "Negative consumption"
+    end
+
+    if uS.sigma == 1.0
+        muM = 1.0 ./ cM;
+    else
+        muM = cM .^ (-uS.sigma);
+    end
+    return muM
 end
 
 
@@ -82,6 +90,9 @@ Lifetime utility, given present value of income
 function lifetime_utility(uS :: CRRA, beta :: T1, R :: T1, T :: T2,
     ltIncome :: T1) where {T1 <: AbstractFloat, T2 <: Integer}
 
+    if uS.dbg
+        @assert ltIncome .> 0.0  "Negative income"
+    end
     utilV = utility(uS, cons_path(uS, beta, R, T, ltIncome));
     return sum((beta .^ (0 : (T-1))) .* utilV);
 end

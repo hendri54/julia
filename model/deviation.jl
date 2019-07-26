@@ -102,6 +102,7 @@ function length(d :: DevVector)
 end
 
 function append!(d :: DevVector, dev :: Deviation)
+    @assert !modelLH.exists(d, dev.name)  "Deviation $(dev.name) already exists"
     Base.push!(d.dv, dev)
 end
 
@@ -137,6 +138,11 @@ function retrieve(d :: DevVector, dName :: Symbol)
         end
     end
     return outDev :: Deviation
+end
+
+
+function exists(d :: DevVector, dName :: Symbol)
+    return !modelLH.isempty(retrieve(d, dName))
 end
 
 
