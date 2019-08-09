@@ -44,6 +44,11 @@ function git_upload(pkgName :: String)
     repoDir = develop_dir(pkgName);
     @assert isdir(repoDir);
     run(Cmd(`git add .`, dir = repoDir))
-    run(Cmd(`git commit -am "update"`, dir = repoDir));
+    # Commit fails if there is nothing to commit
+    try
+	    run(Cmd(`git commit -am "update"`, dir = repoDir));
+	catch
+	    println("git commit failed")
+	end
     run(Cmd(`git push origin master`, dir = repoDir));
 end
