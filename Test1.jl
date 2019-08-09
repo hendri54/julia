@@ -1,32 +1,27 @@
 module Test1
 
+using Profile, StatProfilerHTML
 
-@enum Fruit apple=1 orange=2 kiwi=3
-
-function foo(apple)
-    println("apple")
+function profile_test(n)
+    for i = 1:n
+        A = randn(100,100,20)
+        m = maximum(A)
+        Am = mapslices(sum, A; dims=2)
+        B = A[:,:,5]
+        Bsort = mapslices(sort, B; dims=1)
+        b = rand(100)
+        C = B.*b
+    end
 end
 
-function foo(orange)
-    println("orange")
+
+function run_profiler(n)
+    Profile.clear();
+    @profile profile_test(n);
+    Profile.print(stdout, maxdepth=7, mincount = 50)
+
+    statprofilehtml()
 end
 
-abstract type AT end
-
-struct A1 <: AT
-    x
-end
-
-struct A2 <: AT
-    z
-end
-
-function bar(z :: A1)
-    println("A1")
-end
-
-function bar(z :: A2)
-    println("A2")
-end
 
 end
