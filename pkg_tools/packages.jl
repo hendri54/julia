@@ -13,7 +13,7 @@ end
 Package spec points to github
 """
 function get_pkg_spec(pkgName :: String)
-    @assert pkg_exists(pkgName)
+    @assert pkg_exists(pkgName)  "Package $pkgName does not exist"
     return PackageSpec(name = pkgName,
         url = githubUrl * pkgName,
         uuid = pkgList[pkgName]);
@@ -24,7 +24,7 @@ end
 Package spec for local develop
 """
 function local_pkg_spec(pkgName :: String; compName = :current)
-    @assert pkg_exists(pkgName)
+    @assert pkg_exists(pkgName)  "Package $pkgName does not exist"
     return PackageSpec(name = pkgName,
         path = develop_dir(pkgName, compName = compName),
         uuid = pkgList[pkgName]);
@@ -35,7 +35,7 @@ end
 #Package spec for remote develop
 #"""
 #function remote_pkg_spec(pkgName :: String; comp = computerLongleaf)
-#    @assert pkg_exists(pkgName)
+#    @assert pkg_exists(pkgName)  "Package $pkgName does not exist"
 #    return PackageSpec(name = pkgName,
 #        path = develop_dir(pkgName; comp = comp),
 #        uuid = pkgList[pkgName]);
@@ -48,7 +48,7 @@ activate_pkg
 function activate_pkg(pkgName :: String)
 	pDir = develop_dir(pkgName);
 	@assert isdir(pDir)
-	@assert pkg_exists(pkgName)
+	@assert pkg_exists(pkgName)  "Package $pkgName does not exist"
 	Pkg.activate(pDir);
 end
 

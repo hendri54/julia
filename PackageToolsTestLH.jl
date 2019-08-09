@@ -36,26 +36,12 @@ using PackageToolsLH
 
     develop_pkg(pkgName)
     test_pkg(pkgName)
-    remove_pkg(pkgName)
-
-    rCmd = PackageToolsLH.rsync_command(pkgName, trialRun = true);
-    println(rCmd)
-    @test isa(rCmd, Cmd)
+    remove_pkg(pkgName)    
     
-    
-   	@testset "Directories" begin
-		newStr = "remove/this"
-		add_to_path!(newStr)
-		@test in(newStr, LOAD_PATH)
-		remove_from_path!(newStr);
-		@test !in(newStr, LOAD_PATH)
-		n = length(LOAD_PATH)
-		remove_from_path!(newStr);
-		@test length(LOAD_PATH) == n
-	end
-	
-	
-
+	include("pkg_tools/directories_test.jl")	
+	include("pkg_tools/file_transfer_test.jl")
+	include("pkg_tools/projects_test.jl")
+	include("pkg_tools/sbatch_test.jl")
 end
 
 # ------------

@@ -36,6 +36,15 @@ function shared_dir(; compName = :current)
 end
 
 
+"""
+sbatch_dir()
+
+Command files (`sbatch`) and similar objects go here to be run on the remote machine
+"""
+function sbatch_dir(; compName :: Symbol = :current)
+	return joinpath(julia_dir(compName = compName), "longleaf")
+end
+
 
 """
 test_file_dir()
@@ -55,12 +64,32 @@ function develop_dir(pkgName :: String; compName = :current)
 end
 
 
-#"""
-#Remote develop dir: "ssh:lhendri@longleaf.unc.edu:/nas/.../julia/MyPkg"
-#"""
-#function remote_develop_dir(pkgName :: String)
-#    return joinpath(remoteUrl, remoteBaseDir, "julia", pkgName)
-#end
+"""
+Make a pair of local and remote paths, both in the same location relative to homedir()
+
+srcPath
+	can be absolute path on either machine or relative to `homedir()`
+"""
+function remote_and_local_path(srcPath :: String; srcCompName :: Symbol = :local,
+	tgCompName :: Symbol = defaultRemote)
+	
+	srcComp = get_computer(srcCompName);
+	tgComp = get_computer(tgCompName);
+	
+    if isabspath(srcPath)
+    	if startswith(srcPath, srcComp.homeDir)
+			srcPath = relpath(srcPath, srcComp.homeDir);    	
+		elseif startswith(srcPath, tgComp.homeDir)
+			srcPath = relpath(srcPath, tgComp.homeDir);    	
+		else
+			error("srcPath must be inside home directory:  $srcPath")
+		end
+	end
+
+    localDir = joinpath(srcComp.homeDir, srcPath);
+    remoteDir = joinpath(tgComp.homeDir, srcPath);
+	return localDir, remoteDir
+end
 
 
 """

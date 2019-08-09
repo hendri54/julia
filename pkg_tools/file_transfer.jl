@@ -1,44 +1,102 @@
 """
-Rsync to longleaf
+Rsync to remote machine. Same folder relative to `homedir()`
+
+srcDir
+	source directory on local machine
+	must be relative to homedir() on both machines
+	if absolute path is given, it must hang off homedir()
 
 Fails if local or remote paths contain spaces
 #ToDo: How to make the interpolation work when there are quotes around the objects?
 """
-function rsync_command(pkgName :: String; trialRun :: Bool = false)
+function rsync_command(srcDir :: String;  remoteName :: Symbol = :longleaf,  trialRun :: Bool = false)
     @assert run_local()  "Can only be run on local machine"
+	localDir, remoteDir = remote_and_local_path(srcDir,  tgCompName = remoteName);
 
-	remoteName = :longleaf;
-	compRemote = computerV[remoteName];
-	# This ensures that `localDir` end in `/`
-    localDir = joinpath(develop_dir(pkgName), "");
+	# This ensures that `localDir` ends in `/`
+    localDir = joinpath(localDir, "");
     @assert localDir[end] == '/'
-    remoteDir = develop_dir(pkgName, compName = remoteName);
+
+    # Ensure that remote dir does NOT end in "/"
+    if remoteDir[end] == '/'
+    	remoteDir = remoteDir[1 : (end-1)];
+    end
+
     switchStr = "-atuzv";
     if trialRun
         switchStr = switchStr * "n";
     end
+
+	compRemote = get_computer(remoteName);
     remoteStr = "$(compRemote.sshStr):$remoteDir";
-    cmdStr = `rsync $switchStr --delete $localDir $remoteStr`
+    cmdStr = `rsync $switchStr --delete --exclude .git $localDir $remoteStr`
+	return cmdStr
 end
 
-function rsync_pkg(pkgName :: String; trialRun :: Bool = false)
-    run(rsync_command(pkgName, trialRun = trialRun))
+
+"""
+rsync_pkg
+
+Upload the package's `develop_dir()` where its code is stored
+"""
+function rsync_pkg(pkgName :: String; remoteName :: Symbol = defaultRemote, trialRun :: Bool = false)
+	rCmd = rsync_command(develop_dir(pkgName),  remoteName = remoteName,  trialRun = trialRun);
+	show(rCmd)
+    run(rCmd)
 end
 
-function rsync_shared(;trialRun :: Bool = false)
-    # switchStr = "-atuzv";
-    # if trialRun
-    #     switchStr = switchStr * "n";
-    # end
-    # cmdStr = `rsync $switchStr $localDir $remoteStr`
-    rsync_pkg("shared"; trialRun = trialRun)
+
+function rsync_shared(;remoteName :: Symbol = defaultRemote,  trialRun :: Bool = false)
+	rCmd = rsync_command(shared_dir(),  remoteName = remoteName,  trialRun = trialRun);
+	show(rCmd)
+	run(rCmd)
+end
+
+
+function rsync_sbatch(;remoteName :: Symbol = defaultRemote,  trialRun :: Bool = false)
+	rCmd = rsync_command(sbatch_dir(), remoteName = remoteName, trialRun = trialRun);
+	show(rCmd)
+	run(rCmd)
+end
+
+
+"""
+Copy a file to a remote machine using scp
+Assumes that local and remote path are the same relative to `homedir()`
+
+test this +++++
+"""
+function remote_copy(filePath :: String;  srcCompName :: Symbol = :local,
+	tgCompName :: Symbol = defaultRemote,  trialRun :: Bool = false)
+
+	localPath, remotePath = remote_and_local_path(filePath;  srcCompName = srcCompName,  tgCompName = tgCompName);
+	
+	if srcCompName == :local
+		compRemote = get_computer(tgCompName);
+		@assert isfile(localPath)  "File does not exist: $localPath"
+	else
+		compRemote = get_computer(srcCompName);
+	end
+	sshStr = "$(compRemote.sshStr):";	
+
+	if srcCompName == :local
+		rcCmd = `scp $localPath $sshStr$remotePath`
+	else
+		rcCmd = `scp $sshStr$localPath $remotePath`
+	end
+	if !trialRun
+		run(rcCmd)
+	else
+		show(rcCmd)
+	end
+	return rcCmd
 end
 
 
 """
 Upload to git
 
-test this +++++
+It would be easier to run a bash script, but this yields a permission denied error (why?)
 """
 function git_upload(pkgName :: String)
     repoDir = develop_dir(pkgName);

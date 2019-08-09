@@ -1,22 +1,45 @@
-# Scratch space for testing code in Juno
-
-n = 4;
-prefScale = 0.4;
-dbg = true;
-
-
-nTypes = 1
-
-value_xV = collect(range(100.0, 110.0, length = n)');
-
-if nTypes == 1
-   value_ixM = value_xV;
-else
-   value_ixM = collect(range(1.0, 0.9, length = nTypes)) *
-     collect(range(100.0, 110.0, length = n)');
+function g1(a)
+    if a == 0
+        f(x) = 2
+    else
+        f(x) = 3
+    end
+    println(f(1))
 end
 
-prob_ixM, eVal_iV = econLH.extreme_value_decision(value_ixM, prefScale, dbg);
-check_by_sim(value_ixM, prob_ixM, eVal_iV, prefScale);
+function g2(a)
+    f = x -> 1
+    if a == 0
+        f(x) = 2
+    else
+        f(x) = 3
+    end
+    println(f(1))
+end
+function g3(a)
+    f(x) = 1
+    if a == 0
+        f(x) = 2
+    else
+        f(x) = 3
+    end
+    println(f(1))
+end
+function g4(a)
+    f = x -> 1
+    if a == 0
+        f = x -> 2
+    else
+        f = x -> 3
+    end
+    println(f(1))
+end
 
-typeof(eVal_iV)
+g1(0) # 3
+g2(0) # 3
+g3(0) # 3
+g4(0) # 2
+# g1(1) #fails
+g2(1) #1
+g3(1) #3
+g4(1) #1

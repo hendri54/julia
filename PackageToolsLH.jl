@@ -22,15 +22,14 @@ pkgList = Dict(["TestPkgLH" => "430be53e-b6e1-11e9-3835-cd004dc5e9d7",
     "ModelParams" => "4089ccbe-b1dc-5f86-a141-4606b18b4241",
     "SampleModel" => "baca8756-f3e0-5c0e-9c56-99e4124d7c11"]);
 
-
-githubUrl = "https://github.com/hendri54/";
+const githubUrl = "https://github.com/hendri54/";
+const defaultRemote = :longleaf;
 
 include("pkg_tools/computers.jl")
 include("pkg_tools/directories.jl")
 include("pkg_tools/packages.jl")
 include("pkg_tools/file_transfer.jl")
-
-# --------  rsync
-
+include("pkg_tools/projects.jl")
+include("pkg_tools/sbatch.jl")
 
 end # module
